@@ -1,16 +1,21 @@
 from flask import Flask, request, jsonify, render_template_string
-from anthropic import Anthropic
+import httpx
 import os
 
 app = Flask(__name__)
 
-# Инициализация клиента
-client = Anthropic(
+# Создаем HTTP клиент вручную (обходим баг с proxies)
+http_client = httpx.Client(
     base_url=os.environ.get("ANTHROPIC_BASE_URL", "https://api.ecomagent.in/"),
-    api_key=os.environ.get("ANTHROPIC_AUTH_TOKEN")
+    headers={
+        "x-api-key": os.environ.get("ANTHROPIC_AUTH_TOKEN", ""),
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+    },
+    timeout=60.0
 )
 
-# HTML шаблон прямо в коде
+# HTML шаблон
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="ru">
@@ -139,19 +144,6 @@ HTML_TEMPLATE = '''
         .input-area button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-        }
-        .typing {
-            color: #999;
-            font-style: italic;
-            padding: 10px 0;
-        }
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 10px 18px;
-            border-radius: 10px;
-            margin: 10px 0;
-            border: 1px solid #fcc;
         }
         .footer {
             text-align: center;
@@ -285,16 +277,30 @@ def chat():
         if not user_message:
             return jsonify({'success': False, 'error': 'Сообщение пустое'})
         
-        response = client.messages.create(
-            model="claude-3-sonnet-20240229",
-            max_tokens=500,
-            messages=[{"role": "user", "content": user_message}]
+        # Отправляем запрос напрямую через httpx
+        response = http_client.post(
+            "/v1/messages",
+            json={
+                "model": "claude-3-sonnet-20240229",
+                "max_tokens": 500,
+                "messages": [{"role": "user", "content": user_message}]
+            }
         )
         
-        return jsonify({
-            'success': True,
-            'response': response.content[0].text
-        })
+        if response.status_code == 200:
+            result = response.json()
+            # Извлекаем текст ответа
+            if 'content' in result and len(result['content']) > 0:
+                reply = result['content'][0].get('text', 'Нет текста в ответе')
+                return jsonify({'success': True, 'response': reply})
+            else:
+                return jsonify({'success': False, 'error': 'Неожиданный формат ответа'})
+        else:
+            return jsonify({
+                'success': False, 
+                'error': f'API ошибка {response.status_code}: {response.text}'
+            })
+            
     except Exception as e:
         return jsonify({
             'success': False,
