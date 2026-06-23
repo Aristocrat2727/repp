@@ -164,6 +164,14 @@ HTML_TEMPLATE = '''
         .clear-btn:hover {
             background: #c0392b;
         }
+        .model-badge {
+            font-size: 10px;
+            background: #4ade80;
+            color: #1a1a1a;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -171,6 +179,7 @@ HTML_TEMPLATE = '''
         <div class="header">
             <h1>🤖 Claude AI</h1>
             <div style="display: flex; align-items: center; gap: 15px;">
+                <span class="model-badge">Opus 4.8</span>
                 <button class="clear-btn" onclick="clearChat()">Очистить</button>
                 <div class="status">Online</div>
             </div>
@@ -178,7 +187,7 @@ HTML_TEMPLATE = '''
 
         <div class="messages" id="messages">
             <div class="message assistant">
-                <div class="bubble">Привет! Я Claude через ecomagent.in. Задайте мне вопрос!</div>
+                <div class="bubble">Привет! Я Claude Opus 4.8 через ecomagent.in. Задайте мне вопрос!</div>
             </div>
         </div>
 
@@ -186,7 +195,7 @@ HTML_TEMPLATE = '''
             <input type="text" id="userInput" placeholder="Введите сообщение..." />
             <button id="sendBtn">Отправить</button>
         </div>
-        <div class="footer">Работает на ecomagent.in прокси</div>
+        <div class="footer">Работает на ecomagent.in прокси • Модель: Claude Opus 4.8</div>
     </div>
 
     <script>
@@ -281,8 +290,9 @@ def chat():
         response = http_client.post(
             "/v1/messages",
             json={
-                "model": "claude-3-sonnet-20240229",
-                "max_tokens": 500,
+                "model": "claude-opus-4-8",  # Используем доступную модель
+                "max_tokens": 1000,
+                "temperature": 0.7,
                 "messages": [{"role": "user", "content": user_message}]
             }
         )
